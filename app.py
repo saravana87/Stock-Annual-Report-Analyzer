@@ -38,9 +38,10 @@ def show_data_input_page():
         st.info("Starting download...")
         try:                
             nifty_data = fetch_nifty50_data()  # Call the crawler function
+            nifty_data.dropna(how="all", inplace=True)
             st.success("Data download complete!")            
             # Display data or provide download
-            st.write(nifty_data)  # Display in Streamlit
+            st.write(nifty_data.dropna())  # Display in Streamlit
             # If data is in a DataFrame, you can add a download button:
             csv = nifty_data.to_csv(index=False)
             current_date = datetime.now().strftime('%Y%m%d_%H%M')        
@@ -66,15 +67,35 @@ def show_data_input_page():
                st.error(f"Error reading file: {e}")
 
 def show_data_overview_page():
-   st.title("Data Overview")
-   
-   if 'stock_data' not in st.session_state:
-       st.warning("No data loaded. Please load data from the Data Input page.")
-       return
-   
-   # Display data overview
-   st.write("Loaded Stocks:")
-   st.dataframe(st.session_state['stock_data'])
+    st.title("Data Overview")
+    
+    uploaded_excel = st.file_uploader("Upload an Excel file", type=["xlsx"])
+    
+    if uploaded_excel:
+        try:
+            # Load the Excel file
+            excel_data = pd.ExcelFile(uploaded_excel)
+            
+            # Display sheet names
+            st.write("Sheet names:")
+            st.write(excel_data.sheet_names)
+            
+            # Option to select a sheet to view
+            sheet_name = st.selectbox("Select a sheet to preview", excel_data.sheet_names)
+            
+            # Load and display the selected sheet
+            df = excel_data.parse(sheet_name)
+            st.write("Data preview:")
+            st.dataframe(df.head(10))
+            
+            # Store the dataframe in session state
+            st.session_state['stock_data'] = df
+            
+        except Exception as e:
+            st.error(f"Error reading Excel file: {e}")
+    else:
+        st.warning("No data loaded. Please upload an Excel file.")
+
 
 def show_analysis_page():
    st.title("Stock Analysis")
